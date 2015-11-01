@@ -1,11 +1,11 @@
 {
-  "name": "designs2/attribute_translatedurl",
-  "description": "MetaModels attribute for translated urls",
+  "name": "designs2/attribute_translatedpageid",
+  "description": "MetaModels attribute for translated pageid",
   "keywords": [
     "contao",
     "metamodels",
     "attribute",
-    "url",
+    "pageid",
     "translatable"
   ],
   "type": "contao-module",
@@ -26,17 +26,17 @@
   ],
   "support": {
     "email": "mail@metamodel.me",
-    "issues": "https://github.com/MetaModels/metamodelsattribute_translatedurl/issues",
+    "issues": "https://github.com/designs2/attribute_translatedpageid/issues",
     "wiki": "http://de.contaowiki.org/MetaModels",
     "irc": "irc://irc.freenode.org/contao.mm",
-    "source": "https://github.com/designs2/metamodelsattribute_translatedurl"
+    "source": "https://github.com/designs2/attribute_translatedpageid"
   },
   "require": {
     "php": ">=5.3",
     "contao/core": ">=3.2,<3.6",
     "contao-community-alliance/composer-plugin": "*",
     "designs2/core": "*",
-    "designs2/attribute_url": "*"
+    "designs2/attribute_pageid": "*"
   },
   "require-dev": {
     "cyberspectrum/contao-toolbox": "*",
@@ -54,11 +54,11 @@
   "extra": {
     "contao": {
       "symlinks": {
-        "contao": "system/modules/metamodelsattribute_translatedurl"
+        "contao": "system/modules/metamodelsattribute_translatedpageid"
       },
       "transifex": {
         "project": "metamodels",
-        "prefix": "attribute_translatedurl-",
+        "prefix": "attribute_translatedpageid-",
         "languages_cto": "contao/languages",
         "languages_tx": ".tx"
       }
