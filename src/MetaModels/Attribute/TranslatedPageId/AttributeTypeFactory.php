@@ -15,7 +15,7 @@
  * @filesource
  */
 
-namespace MetaModels\Attribute\TranslatedPageID;
+namespace MetaModels\Attribute\TranslatedPageId;
 
 use MetaModels\Attribute\AbstractAttributeTypeFactory;
 
@@ -31,7 +31,7 @@ class AttributeTypeFactory extends AbstractAttributeTypeFactory
     {
         parent::__construct();
         $this->typeName  = 'translatedpageid';
-        $this->typeIcon  = 'system/modules/metamodelsattribute_translatedurl/html/pageid.png';
-        $this->typeClass = 'MetaModels\Attribute\TranslatedPageID\TranslatedPageID';
+        $this->typeIcon  = 'system/modules/metamodelsattribute_translatedpageid/html/pageid.png';
+        $this->typeClass = 'MetaModels\Attribute\TranslatedPageId\TranslatedPageId';
     }
 }

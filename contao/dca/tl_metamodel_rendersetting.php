@@ -17,4 +17,4 @@
  * @filesource
  */
 
-$GLOBALS['TL_DCA']['tl_metamodel_rendersetting']['metapalettes']['translatedpageid extends pageid'] = array();
+//$GLOBALS['TL_DCA']['tl_metamodel_rendersetting']['metapalettes']['translatedpageid extends pageid'] = array();

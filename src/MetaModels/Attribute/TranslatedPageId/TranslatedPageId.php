@@ -14,6 +14,7 @@
  * @author     Oliver Hoff <oliver@hofff.com>
  * @author     Andreas Isaak <info@andreas-isaak.de>
  * @author     Christopher Boelter <christopher@boelter.eu>
+ * @author     Monique Hahnefeld <info@designs2.de>
  * @copyright  The MetaModels team.
  * @license    LGPL.
  * @filesource
@@ -23,7 +24,7 @@ namespace MetaModels\Attribute\TranslatedPageId;
 
 use ContaoCommunityAlliance\DcGeneral\Contao\View\Contao2BackendView\Event\ManipulateWidgetEvent;
 use MetaModels\Attribute\TranslatedReference;
-use MetaModels\DcGeneral\Events\UrlWizardHandler;
+use MetaModels\DcGeneral\Events\PageIdWizardHandler;
 
 /**
  * Handle the translated url attribute.
@@ -39,7 +40,7 @@ class TranslatedPageId extends TranslatedReference
      */
     public function getFilterUrlValue($value)
     {
-        return htmlencode(serialize($value));
+        return $value;
     }
 
     /**
@@ -49,8 +50,7 @@ class TranslatedPageId extends TranslatedReference
     {
         return array_merge(parent::getAttributeSettingNames(), array(
             'no_external_link',
-            'mandatory',
-            'trim_title'
+            'mandatory'
         ));
     }
 
@@ -65,25 +65,17 @@ class TranslatedPageId extends TranslatedReference
     /**
      * {@inheritdoc}
      */
-    public function valueToWidget($value)
+    public function valueToWidget($varValue)
     {
-        if ($this->get('trim_title')) {
-            return $value['href'];
-        } else {
-            return array($value['title'], $value['href']);
-        }
+        return parent::valueToWidget($varValue);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function widgetToValue($value, $idValue)
+    public function widgetToValue($varValue, $intId)
     {
-        if ($this->get('trim_title')) {
-            return array('href' => $value);
-        } else {
-            return array_combine(array('title', 'href'), $value);
-        }
+        return parent::widgetToValue($varValue, $intId);
     }
 
     /**
@@ -109,7 +101,7 @@ class TranslatedPageId extends TranslatedReference
         $dispatcher = $this->getMetaModel()->getServiceContainer()->getEventDispatcher();
         $dispatcher->addListener(
             ManipulateWidgetEvent::NAME,
-            array(new UrlWizardHandler($this->getMetaModel(), $this->getColName()), 'getWizard')
+            array(new PageIdWizardHandler($this->getMetaModel(), $this->getColName()), 'getWizard')
         );
 
         return $arrFieldDef;
@@ -151,52 +143,11 @@ class TranslatedPageId extends TranslatedReference
 
         $result = $this->getMetaModel()->getServiceContainer()->getDatabase()->prepare($sql)->execute($params);
 
-        return $result->fetchEach('id');
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function sortIds($ids, $direction)
-    {
-        $ids = (array) $ids;
-
-        if (count($ids) < 2) {
-            return $ids;
-        }
-
-        if ($direction !== 'DESC') {
-            $direction = 'ASC';
-        }
-
-        $sql = sprintf(
-            'SELECT _model.id FROM %1$s AS _model
-            LEFT JOIN %2$s AS _active ON _active.item_id=_model.id
-                                        AND _active.att_id=?
-                                        AND _active.language=?
-            LEFT JOIN %2$s AS _fallback ON _active.item_id IS NULL
-                                        AND _fallback.item_id=_model.id
-                                        AND _fallback.att_id=?
-                                        AND _fallback.language=?
-            WHERE _model.id IN (%3$s)
-            ORDER BY COALESCE(_active.title, _active.href, _fallback.title, _fallback.href) %4$s,
-                     COALESCE(_active.href, _fallback.href) %4$s',
-            $this->getMetaModel()->getTableName(),
-            $this->getValueTable(),
-            $this->parameterMask($ids),
-            $direction
-        );
-
-        $params[] = $this->get('id');
-        $params[] = $this->getMetaModel()->getActiveLanguage();
-        $params[] = $this->get('id');
-        $params[] = $this->getMetaModel()->getFallbackLanguage();
-        $params   = array_merge($params, $ids);
-        $result   = $this->getMetaModel()->getServiceContainer()->getDatabase()->prepare($sql)->execute($params);
 
         return $result->fetchEach('id');
     }
 
+    
     /**
      * {@inheritdoc}
      */
@@ -208,11 +159,11 @@ class TranslatedPageId extends TranslatedReference
         }
 
         $this->unsetValueFor(array_keys($values), $language);
-
+        $DB = $this->getMetaModel()->getServiceContainer()->getDatabase();
         $sql = sprintf(
-            'INSERT INTO %1$s (att_id, item_id, language, tstamp, href, title) VALUES %2$s',
+            'INSERT INTO %1$s (att_id, item_id, language, tstamp, value_id) VALUES %2$s',
             $this->getValueTable(),
-            rtrim(str_repeat('(?,?,?,?,?,?),', count($values)), ',')
+            rtrim(str_repeat('(?,?,?,?,?),', count($values)), ',')
         );
 
         $time   = time();
@@ -222,11 +173,48 @@ class TranslatedPageId extends TranslatedReference
             $params[] = $id;
             $params[] = $language;
             $params[] = $time;
-            $params[] = $value['href'];
-            $params[] = strlen($value['title']) ? $value['title'] : null;
+            $params[] = $value['value'];
         }
 
-        $this->getMetaModel()->getServiceContainer()->getDatabase()->prepare($sql)->execute($params);
+        $DB->prepare($sql)->execute($params);
+
+        //set name and alias 
+        $AttributeIsTranslatedData = function($attribute){
+               return in_array('setTranslatedDataFor',get_class_methods($this->getMetaModel()->getAttribute($attribute)));
+        };
+        
+        if(!$AttributeIsTranslatedData('name') || !$AttributeIsTranslatedData('alias')){
+            echo('You have to use translated attributes for name or alias if you use the attribute type of "attribute_translatedpageid"');
+            exit;
+        }elseif(Null === $this->getMetaModel()->getAttribute('name') || Null === $this->getMetaModel()->getAttribute('alias')){
+            echo('You need the translated text attributes "name" and "alias" in your MetaModel:'.$strTable);
+            exit;
+        }else{
+                 
+            // Nur type Text für Name und Alias verwenden. Alias funktioniert (noch) nicht.
+            $pageModel                      = \PageModel::findById($value['value']);
+            $translatedTextValueTable       = 'tl_metamodel_translatedtext';
+            $currentId                      = array_keys($values)[0]; //$this->get('id');       
+            $nameAttrId                     = $this->getMetaModel()->getAttribute('name')->get('id');
+            $aliasAttrId                    = $this->getMetaModel()->getAttribute('alias')->get('id');
+            //to unset it find with item_id & attr_id & langcode -> es darf nur eins geben!
+            //set new Items
+            /*
+              `id` int(10) unsigned NOT NULL auto_increment,
+              `tstamp` int(10) unsigned NOT NULL default '0',
+              `att_id` int(10) unsigned NOT NULL default '0',
+              `item_id` int(10) unsigned NOT NULL default '0',
+              `langcode` varchar(5) NOT NULL default '',
+              `value` varchar(255) NOT NULL default '',
+            */
+            // Name
+            $sqlSETName     = "INSERT INTO ".$translatedTextValueTable." (att_id, item_id, langcode, tstamp, value) VALUES (?,?,?,?,?) ";
+            $DB->prepare($sqlSETName)->execute($nameAttrId,$currentId,$language,$time,$pageModel->title);
+            // Alias
+            $sqlSETAlias    = "INSERT INTO ".$translatedTextValueTable." (att_id, item_id, langcode, tstamp, value) VALUES (?,?,?,?,?) ";
+            $DB->prepare($sqlSETAlias)->execute($aliasAttrId,$currentId,$language,$time,$pageModel->alias);
+
+        }
     }
 
     /**
@@ -241,7 +229,7 @@ class TranslatedPageId extends TranslatedReference
         }
 
         $sql = sprintf(
-            'SELECT item_id AS id, href, title
+            'SELECT item_id AS id,value_id
             FROM %1$s
             WHERE att_id=?
             AND language=?
@@ -257,7 +245,7 @@ class TranslatedPageId extends TranslatedReference
         $result = $this->getMetaModel()->getServiceContainer()->getDatabase()->prepare($sql)->execute($params);
         $values = array();
         while ($result->next()) {
-            $values[$result->id] = array('href' => $result->href, 'title' => $result->title);
+            $values[$result->id] = array('value' => $result->value_id);
         }
 
         return $values;
@@ -268,6 +256,7 @@ class TranslatedPageId extends TranslatedReference
      */
     public function unsetValueFor($ids, $language)
     {
+        
         $ids = (array) $ids;
 
         if (!$ids) {
@@ -287,6 +276,24 @@ class TranslatedPageId extends TranslatedReference
         $params[] = $language;
         $params   = array_merge($params, $ids);
 
-        $this->getMetaModel()->getServiceContainer()->getDatabase()->prepare($sql)->execute($params);
+        $DB = $this->getMetaModel()->getServiceContainer()->getDatabase();
+        $DB->prepare($sql)->execute($params);
+
+        $translatedTextValueTable       = 'tl_metamodel_translatedtext';
+        $currentId                      = $ids[0];
+        $nameAttrId                     = $this->getMetaModel()->getAttribute('name')->get('id');
+        $aliasAttrId                    = $this->getMetaModel()->getAttribute('alias')->get('id');
+        //remove old value
+        $sqlUNSETName   = "DELETE FROM ".$translatedTextValueTable."
+        WHERE att_id=?
+        AND langcode=?
+        AND item_id=?";
+        $DB->prepare($sqlUNSETName)->execute($nameAttrId,$language,$currentId);
+        $sqlUNSETAlias  = "DELETE FROM ".$translatedTextValueTable."
+        WHERE att_id=?
+        AND langcode=?
+        AND item_id=?";
+        $DB->prepare($sqlUNSETAlias)->execute($aliasAttrId,$language,$currentId);
+     
     }
 }
