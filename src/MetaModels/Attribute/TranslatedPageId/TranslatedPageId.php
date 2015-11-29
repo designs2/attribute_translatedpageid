@@ -127,7 +127,7 @@ class TranslatedPageId extends TranslatedReference
 
         $languages = (array) $languages;
         if ($languages) {
-            $languageCondition = 'AND language IN (' . $this->parameterMask($languages) . ')';
+            $languageCondition = 'AND langcode IN (' . $this->parameterMask($languages) . ')';
         }
 
         $sql = sprintf(
@@ -161,7 +161,7 @@ class TranslatedPageId extends TranslatedReference
         $this->unsetValueFor(array_keys($values), $language);
         $DB = $this->getMetaModel()->getServiceContainer()->getDatabase();
         $sql = sprintf(
-            'INSERT INTO %1$s (att_id, item_id, language, tstamp, value_id) VALUES %2$s',
+            'INSERT INTO %1$s (att_id, item_id, langcode, tstamp, value_id) VALUES %2$s',
             $this->getValueTable(),
             rtrim(str_repeat('(?,?,?,?,?),', count($values)), ',')
         );
@@ -232,7 +232,7 @@ class TranslatedPageId extends TranslatedReference
             'SELECT item_id AS id,value_id
             FROM %1$s
             WHERE att_id=?
-            AND language=?
+            AND langcode=?
             AND item_id IN (%2$s)',
             $this->getValueTable(),
             $this->parameterMask($ids)
@@ -266,7 +266,7 @@ class TranslatedPageId extends TranslatedReference
         $sql = sprintf(
             'DELETE FROM %1$s
             WHERE att_id=?
-            AND language=?
+            AND langcode=?
             AND item_id IN (%2$s)',
             $this->getValueTable(),
             $this->parameterMask($ids)
